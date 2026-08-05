@@ -1,0 +1,26 @@
+export const imagePlacementMap = {
+  photo: [
+    { id: 'photo-p3', page: 3, x: 472.7, y: 44.8, width: 103, height: 118.5 },
+    { id: 'photo-p6', page: 6, x: 491, y: 47.2, width: 83, height: 91.9 },
+    { id: 'photo-p7', page: 7, x: 472.7, y: 44.8, width: 103, height: 118.5 },
+    { id: 'photo-p10', page: 10, x: 491, y: 47.2, width: 83, height: 91.9 },
+    { id: 'photo-p22', page: 22, x: 33.6, y: 571.8, width: 84.6, height: 90.1 },
+    { id: 'photo-p24', page: 24, x: 33.6, y: 571.8, width: 84.6, height: 90.1 },
+  ],
+  signature: [
+    { id: 'signature-p3', page: 3, x: 472.7, y: 168.1, width: 103, height: 44.8 },
+    { id: 'signature-p6', page: 6, x: 360, y: 506, width: 210, height: 22 },
+    { id: 'signature-p7', page: 7, x: 472.7, y: 168.1, width: 103, height: 44.8 },
+    { id: 'signature-p10', page: 10, x: 360, y: 506, width: 210, height: 22 },
+    { id: 'signature-p14-1', page: 14, x: 44, y: 393, width: 180, height: 23 },
+    { id: 'signature-p14-2', page: 14, x: 236, y: 393, width: 180, height: 23 },
+    { id: 'signature-p14-3', page: 14, x: 44, y: 429, width: 180, height: 23 },
+    { id: 'signature-p14-4', page: 14, x: 236, y: 429, width: 180, height: 23 },
+    { id: 'signature-p14-authorized', page: 14, x: 455, y: 761, width: 118, height: 27 },
+    { id: 'signature-p16', page: 16, x: 350, y: 584, width: 185, height: 34 },
+    { id: 'signature-p22', page: 22, x: 424.8, y: 588.7, width: 153.8, height: 56.3 },
+    { id: 'signature-p22-office', page: 22, x: 301.5, y: 771.5, width: 99, height: 18 },
+    { id: 'signature-p24', page: 24, x: 424.8, y: 588.7, width: 153.8, height: 56.3 },
+    { id: 'signature-p24-office', page: 24, x: 301.5, y: 771.5, width: 99, height: 18 },
+  ],
+};
