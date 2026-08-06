@@ -105,6 +105,15 @@ export async function submitApplication(id, formData, submittedAt) {
     .run(formData, submittedAt, submittedAt, id);
 }
 
+export async function deleteApplication(id) {
+  await ready();
+  if (useNeon) {
+    await neonSql.query('DELETE FROM applications WHERE id = $1', [id]);
+    return;
+  }
+  sqlite.prepare('DELETE FROM applications WHERE id = ?').run(id);
+}
+
 export function databaseKind() {
   return useNeon ? 'neon' : 'sqlite';
 }

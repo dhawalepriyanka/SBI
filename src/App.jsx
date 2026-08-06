@@ -163,6 +163,24 @@ export default function App() {
     }
   }, [current, formData, loadApplications]);
 
+  const deleteCurrentApplication = useCallback(async () => {
+    if (!current) return;
+    if (!window.confirm(`Are you sure you want to delete application ${current.id.slice(0, 8).toUpperCase()}?`)) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      await apiRequest(`/api/applications/${current.id}`, { method: 'DELETE' });
+      setCurrent(null);
+      clearForm();
+      await loadApplications();
+      setMessage('Application deleted successfully.');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }, [clearForm, current, loadApplications]);
+
   const usePdfBlob = useCallback(async (mode) => {
     if (!current || user.role !== 'manager') return;
     setBusy(true);
@@ -267,7 +285,7 @@ export default function App() {
           user={user} applications={applications} currentId={current?.id} hasApplication={Boolean(current)} readOnly={readOnly} busy={busy}
           onPageChange={setPage} onScaleChange={(next) => { setFitMode(null); setScale(next); }}
           onFitMode={setFitMode} onRotate={() => setRotation((value) => (value + 90) % 360)}
-          onNew={newApplication} onOpen={openApplication} onReset={clearForm} onSave={saveApplication} onSubmit={submitApplication}
+          onNew={newApplication} onOpen={openApplication} onReset={clearForm} onSave={saveApplication} onSubmit={submitApplication} onDelete={deleteCurrentApplication}
           onGenerate={() => usePdfBlob('generate')} onDownload={() => usePdfBlob('download')} onPrint={() => usePdfBlob('print')} />
         {managerWithoutSelection ? <div className="manager-empty"><h2>Select a submitted application</h2><p>Choose an application from the Actions menu to review its stored form data and generate the official PDF.</p></div> : <>
           <PdfViewer fieldMap={fieldMap} values={values} photo={photo} signature={signature} page={page} scale={scale} fitMode={fitMode} rotation={rotation}

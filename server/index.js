@@ -7,7 +7,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { fillOriginalPdf } from '../src/utils/fillPdf.js';
 import { addClickableTables } from '../src/tableFieldMap.js';
 import baseFieldMap from '../src/fieldMap.json' with { type: 'json' };
-import { databaseKind, getApplication, insertApplication, listApplications, submitApplication as submitStoredApplication, updateApplicationData } from './database.js';
+import { databaseKind, deleteApplication, getApplication, insertApplication, listApplications, submitApplication as submitStoredApplication, updateApplicationData } from './database.js';
 
 const serverDir = dirname(fileURLToPath(import.meta.url));
 const projectDir = resolve(serverDir, '..');
@@ -221,6 +221,18 @@ export async function handleApi(request, response, url) {
     const formData = normalizeFormData(body.formData);
     await updateApplicationData(row.id, JSON.stringify(formData), new Date().toISOString());
     return json(response, 200, { application: serializeApplication(await getApplication(row.id), true) });
+  }
+
+  if (applicationMatch && request.method === 'DELETE') {
+    const user = requireUser(request, response);
+    if (!user) return;
+    const row = await getApplication(applicationMatch[1]);
+    if (!row) return json(response, 404, { error: 'Application not found' });
+    const employeeCanDelete = user.role === 'employee' && row.employee_id === user.sub && row.status === 'draft';
+    const managerCanDelete = user.role === 'manager';
+    if (!employeeCanDelete && !managerCanDelete) return json(response, 403, { error: 'Forbidden' });
+    await deleteApplication(row.id);
+    return json(response, 200, { success: true, id: row.id });
   }
 
   const submitMatch = url.pathname.match(/^\/api\/applications\/([^/]+)\/submit$/);
