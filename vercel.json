@@ -3,10 +3,7 @@
   "framework": "vite",
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "server/private/**",
-        "src/fieldMap.json"
-      ],
+      "includeFiles": "server/private/**",
       "maxDuration": 60
     }
   },

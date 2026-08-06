@@ -7,6 +7,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer as createViteServer } from 'vite';
 import { fillOriginalPdf } from '../src/utils/fillPdf.js';
 import { addClickableTables } from '../src/tableFieldMap.js';
+import baseFieldMap from '../src/fieldMap.json' with { type: 'json' };
 import { databaseKind, getApplication, insertApplication, listApplications, submitApplication as submitStoredApplication, updateApplicationData } from './database.js';
 
 const serverDir = dirname(fileURLToPath(import.meta.url));
@@ -22,7 +23,6 @@ const sessionSecret = process.env.SESSION_SECRET || (isProduction ? '' : 'local-
 const sessionCookie = 'sbi_session';
 const canManagerEdit = process.env.MANAGER_EDIT_ENABLED !== 'false';
 
-const baseFieldMap = JSON.parse(await readFile(join(projectDir, 'src', 'fieldMap.json'), 'utf8'));
 const fieldMap = addClickableTables(baseFieldMap);
 
 const configuredUsers = [
