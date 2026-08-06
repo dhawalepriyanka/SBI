@@ -269,5 +269,13 @@ export function addClickableTables(fieldMap) {
   pages['20'] = [
     { id: 'p20_001', type: 'multiline', x: 42, y: 86, width: 528, height: 705 },
   ];
+  ['23', '24'].forEach((page) => {
+    pages[page] = (pages[page] || []).map((field) => {
+      if (field.type === 'text') {
+        return { ...field, maxLength: Math.max(field.maxLength || 35, 45) };
+      }
+      return field;
+    });
+  });
   return { ...fieldMap, pages };
 }

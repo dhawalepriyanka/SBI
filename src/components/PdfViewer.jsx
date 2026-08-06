@@ -50,7 +50,7 @@ export default function PdfViewer({ fieldMap, values, photo, signature, mediaAct
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return undefined;
-    const updateWidth = () => setAvailableWidth(Math.max(320, node.clientWidth - 48));
+    const updateWidth = () => setAvailableWidth(Math.max(280, node.clientWidth - (window.innerWidth < 640 ? 12 : 48)));
     updateWidth();
     const observer = new ResizeObserver(updateWidth);
     observer.observe(node);

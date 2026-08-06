@@ -57,3 +57,32 @@ button { font: inherit; cursor: pointer; } button:disabled { cursor: not-allowed
 .application-select-label { display:block; margin:4px 5px 7px; color:#526b82; font-size:12px; font-weight:600; }.application-select { width:100%; min-height:42px; padding:9px 34px 9px 11px; border:1px solid #d2dde8; border-radius:9px; background:#fff; color:#27435f; font:inherit; font-size:13px; cursor:pointer; }.application-select:hover:not(:disabled),.application-select:focus { border-color:#75a7d4; outline:none; box-shadow:0 0 0 3px rgba(117,167,212,.16); }.application-select:disabled { color:#6c8193; background:#f3f7fa; cursor:not-allowed; }
 .status-message { position:sticky; top:0; z-index:7; padding:9px 18px; border-bottom:1px solid #cfe0ed; background:#eef8ff; color:#285b83; font-size:13px; text-align:center; }.manager-empty { min-height:calc(100vh - 106px); display:grid; align-content:center; justify-items:center; padding:40px; text-align:center; color:#587086; }.manager-empty h2 { margin:0 0 8px; color:#20384e; }.manager-empty p { max-width:540px; margin:0; line-height:1.6; }
 @media (max-width:900px) { .secure-workspace { grid-template-columns:1fr; }.application-panel { position:relative; height:auto; max-height:260px; border-right:0; border-bottom:1px solid #d8e3ec; }.application-list { grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }.session-actions>span:not(.role-badge) { display:none; } }
+
+@media (max-width: 768px) {
+  .app-header { height:auto; padding:12px 16px; flex-wrap:wrap; gap:8px; }
+  .app-header h1 { font-size:18px; }
+  .eyebrow { font-size:8px; }
+  .secure-label { display:none; }
+  .toolbar { padding:6px 10px; gap:6px; -webkit-overflow-scrolling:touch; }
+  .toolbar-actions-select { min-width:130px; font-size:12px; padding:6px 28px 6px 8px; }
+  .viewer-area { padding:10px 4px 28px; }
+  .pdf-stack { max-width:100%; gap:16px; }
+  .pdf-page { min-width:0 !important; max-width:100% !important; width:100% !important; }
+  .field-notice { font-size:11px; margin-bottom:8px; padding:0 4px; text-align:center; }
+  .print-button { padding:7px 12px; font-size:12px; }
+}
+
+@media (max-width: 480px) {
+  .app-header { padding:10px 12px; }
+  .app-header h1 { font-size:16px; }
+  .session-actions { gap:6px; font-size:12px; }
+  .role-badge { padding:4px 8px; font-size:11px; }
+  .toolbar { padding:4px 6px; gap:4px; }
+  .modal-backdrop { padding:10px; }
+  .signature-modal, .preview-modal { padding:14px; border-radius:12px; }
+  .modal-heading h2 { font-size:18px; }
+  .signature-canvas { height:180px; }
+  .image-preview { height:210px; }
+  .modal-actions { flex-wrap:wrap; }
+  .modal-actions button { flex:1 1 auto; }
+}
