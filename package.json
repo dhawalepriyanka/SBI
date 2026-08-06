@@ -3,12 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "node server/index.js --dev",
     "build": "vite build",
     "start": "node server/index.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@vitejs/plugin-react": "latest",
     "pdf-lib": "latest",
     "react": "latest",

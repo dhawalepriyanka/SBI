@@ -1,41 +1,26 @@
 import { createServer } from 'node:http';
-import { readFile, stat, mkdir } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { createReadStream, existsSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
 import { createServer as createViteServer } from 'vite';
 import { fillOriginalPdf } from '../src/utils/fillPdf.js';
 import { addClickableTables } from '../src/tableFieldMap.js';
+import { databaseKind, getApplication, insertApplication, listApplications, submitApplication as submitStoredApplication, updateApplicationData } from './database.js';
 
 const serverDir = dirname(fileURLToPath(import.meta.url));
 const projectDir = resolve(serverDir, '..');
 const privateDir = join(serverDir, 'private');
-const dataDir = join(serverDir, 'data');
 const templatePath = join(privateDir, 'sbi-home-loan-application.pdf');
 const pagesDir = join(privateDir, 'pages');
 const isDev = process.argv.includes('--dev');
 const portArgument = process.argv.find((argument) => argument.startsWith('--port='));
 const port = Number(portArgument?.slice('--port='.length) || process.env.PORT || 5173);
-const sessionSecret = process.env.SESSION_SECRET || 'local-development-secret-change-before-production';
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const sessionSecret = process.env.SESSION_SECRET || (isProduction ? '' : 'local-development-secret-change-before-production');
 const sessionCookie = 'sbi_session';
 const canManagerEdit = process.env.MANAGER_EDIT_ENABLED !== 'false';
-
-await mkdir(dataDir, { recursive: true });
-const database = new DatabaseSync(join(dataDir, 'applications.sqlite'));
-database.exec(`
-  PRAGMA journal_mode = WAL;
-  CREATE TABLE IF NOT EXISTS applications (
-    id TEXT PRIMARY KEY,
-    employee_id TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('draft', 'submitted')),
-    form_data TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    submitted_at TEXT
-  );
-`);
 
 const baseFieldMap = JSON.parse(await readFile(join(projectDir, 'src', 'fieldMap.json'), 'utf8'));
 const fieldMap = addClickableTables(baseFieldMap);
@@ -43,8 +28,8 @@ const fieldMap = addClickableTables(baseFieldMap);
 const configuredUsers = [
   {
     id: process.env.MANAGER_ID || 'manager-001',
-    username: process.env.MANAGER_USERNAME || 'manager',
-    password: process.env.MANAGER_PASSWORD || 'manager123',
+    username: process.env.MANAGER_USERNAME || (isProduction ? '' : 'manager'),
+    password: process.env.MANAGER_PASSWORD || (isProduction ? '' : 'manager123'),
     role: 'manager',
   },
 ];
@@ -62,6 +47,7 @@ function parseCookies(request) {
 }
 
 function signSession(user) {
+  if (!sessionSecret) throw Object.assign(new Error('SESSION_SECRET is not configured'), { status: 503 });
   const payload = Buffer.from(JSON.stringify({ sub: user.id, username: user.username, role: user.role, exp: Date.now() + 8 * 60 * 60 * 1000 })).toString('base64url');
   const signature = createHmac('sha256', sessionSecret).update(payload).digest('base64url');
   return `${payload}.${signature}`;
@@ -119,10 +105,6 @@ function serializeApplication(row, includeData = false) {
   return application;
 }
 
-function applicationById(id) {
-  return database.prepare('SELECT * FROM applications WHERE id = ?').get(id);
-}
-
 function requireUser(request, response) {
   const user = readSession(request);
   if (!user) json(response, 401, { error: 'Authentication required' });
@@ -152,7 +134,7 @@ async function streamOfficialPdf(response, application, disposition) {
   response.end(Buffer.from(bytes));
 }
 
-async function handleApi(request, response, url) {
+export async function handleApi(request, response, url) {
   if (request.method === 'POST' && url.pathname === '/api/auth/employee-session') {
     const existing = readSession(request);
     const employee = existing?.role === 'employee'
@@ -165,6 +147,9 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'POST' && url.pathname === '/api/auth/login') {
+    if (!configuredUsers[0].username || !configuredUsers[0].password) {
+      return json(response, 503, { error: 'Manager credentials are not configured' });
+    }
     const body = await readJson(request, 16 * 1024);
     const user = configuredUsers.find((candidate) => safeEqual(candidate.username, body.username || '') && safeEqual(candidate.password, body.password || ''));
     if (!user) return json(response, 401, { error: 'Invalid username or password' });
@@ -198,9 +183,7 @@ async function handleApi(request, response, url) {
   if (request.method === 'GET' && url.pathname === '/api/applications') {
     const user = requireUser(request, response);
     if (!user) return;
-    const rows = user.role === 'manager'
-      ? database.prepare("SELECT * FROM applications WHERE status = 'submitted' ORDER BY submitted_at DESC").all()
-      : database.prepare('SELECT * FROM applications WHERE employee_id = ? ORDER BY updated_at DESC').all(user.sub);
+    const rows = await listApplications(user);
     return json(response, 200, { applications: rows.map((row) => serializeApplication(row)) });
   }
 
@@ -212,16 +195,15 @@ async function handleApi(request, response, url) {
     const formData = normalizeFormData(body.formData);
     const id = randomUUID();
     const now = new Date().toISOString();
-    database.prepare('INSERT INTO applications (id, employee_id, status, form_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(id, user.sub, 'draft', JSON.stringify(formData), now, now);
-    return json(response, 201, { application: serializeApplication(applicationById(id), true) });
+    await insertApplication({ id, employee_id: user.sub, status: 'draft', form_data: JSON.stringify(formData), created_at: now, updated_at: now });
+    return json(response, 201, { application: serializeApplication(await getApplication(id), true) });
   }
 
   const applicationMatch = url.pathname.match(/^\/api\/applications\/([^/]+)$/);
   if (applicationMatch && request.method === 'GET') {
     const user = requireUser(request, response);
     if (!user) return;
-    const row = applicationById(applicationMatch[1]);
+    const row = await getApplication(applicationMatch[1]);
     if (!row) return json(response, 404, { error: 'Application not found' });
     if (user.role === 'employee' && row.employee_id !== user.sub) return json(response, 403, { error: 'Forbidden' });
     if (user.role === 'manager' && row.status !== 'submitted') return json(response, 404, { error: 'Application not found' });
@@ -231,16 +213,15 @@ async function handleApi(request, response, url) {
   if (applicationMatch && request.method === 'PUT') {
     const user = requireUser(request, response);
     if (!user) return;
-    const row = applicationById(applicationMatch[1]);
+    const row = await getApplication(applicationMatch[1]);
     if (!row) return json(response, 404, { error: 'Application not found' });
     const employeeCanEdit = user.role === 'employee' && row.employee_id === user.sub && row.status === 'draft';
     const managerCanEdit = user.role === 'manager' && canManagerEdit && row.status === 'submitted';
     if (!employeeCanEdit && !managerCanEdit) return json(response, 403, { error: 'Forbidden' });
     const body = await readJson(request);
     const formData = normalizeFormData(body.formData);
-    database.prepare('UPDATE applications SET form_data = ?, updated_at = ? WHERE id = ?')
-      .run(JSON.stringify(formData), new Date().toISOString(), row.id);
-    return json(response, 200, { application: serializeApplication(applicationById(row.id), true) });
+    await updateApplicationData(row.id, JSON.stringify(formData), new Date().toISOString());
+    return json(response, 200, { application: serializeApplication(await getApplication(row.id), true) });
   }
 
   const submitMatch = url.pathname.match(/^\/api\/applications\/([^/]+)\/submit$/);
@@ -248,21 +229,20 @@ async function handleApi(request, response, url) {
     const user = requireUser(request, response);
     if (!user) return;
     if (user.role !== 'employee') return json(response, 403, { error: 'Forbidden' });
-    const row = applicationById(submitMatch[1]);
+    const row = await getApplication(submitMatch[1]);
     if (!row) return json(response, 404, { error: 'Application not found' });
     if (row.employee_id !== user.sub || row.status !== 'draft') return json(response, 403, { error: 'Forbidden' });
     const body = await readJson(request);
     const formData = body.formData ? normalizeFormData(body.formData) : JSON.parse(row.form_data);
     const now = new Date().toISOString();
-    database.prepare("UPDATE applications SET status = 'submitted', form_data = ?, updated_at = ?, submitted_at = ? WHERE id = ?")
-      .run(JSON.stringify(formData), now, now, row.id);
-    return json(response, 200, { application: serializeApplication(applicationById(row.id), true) });
+    await submitStoredApplication(row.id, JSON.stringify(formData), now);
+    return json(response, 200, { application: serializeApplication(await getApplication(row.id), true) });
   }
 
   const generateMatch = url.pathname.match(/^\/api\/applications\/([^/]+)\/generate-pdf$/);
   if (generateMatch && request.method === 'POST') {
     if (!requireManager(request, response)) return;
-    const row = applicationById(generateMatch[1]);
+    const row = await getApplication(generateMatch[1]);
     if (!row || row.status !== 'submitted') return json(response, 404, { error: 'Application not found' });
     return streamOfficialPdf(response, row, 'inline');
   }
@@ -270,7 +250,7 @@ async function handleApi(request, response, url) {
   const pdfMatch = url.pathname.match(/^\/api\/applications\/([^/]+)\/pdf$/);
   if (pdfMatch && request.method === 'GET') {
     if (!requireManager(request, response)) return;
-    const row = applicationById(pdfMatch[1]);
+    const row = await getApplication(pdfMatch[1]);
     if (!row || row.status !== 'submitted') return json(response, 404, { error: 'Application not found' });
     return streamOfficialPdf(response, row, 'attachment');
   }
@@ -294,8 +274,9 @@ async function serveProduction(request, response, url) {
   createReadStream(path).pipe(response);
 }
 
-const vite = isDev ? await createViteServer({ root: projectDir, server: { middlewareMode: true }, appType: 'spa' }) : null;
-const server = createServer(async (request, response) => {
+const isMainModule = Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const vite = isMainModule && isDev ? await createViteServer({ root: projectDir, server: { middlewareMode: true }, appType: 'spa' }) : null;
+const server = isMainModule ? createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   try {
     if (url.pathname.startsWith('/api/')) return await handleApi(request, response, url);
@@ -307,9 +288,10 @@ const server = createServer(async (request, response) => {
     if (!response.headersSent) json(response, error.status || 500, { error: error.status ? error.message : 'Internal server error' });
     else response.end();
   }
-});
+}) : null;
 
-server.listen(port, () => {
+server?.listen(port, () => {
   console.log(`SBI Housing Loan server running at http://localhost:${port}`);
+  console.log(`Application database: ${databaseKind()}`);
   if (sessionSecret.startsWith('local-development')) console.warn('Set SESSION_SECRET before production.');
 });
