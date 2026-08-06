@@ -70,6 +70,12 @@ button { font: inherit; cursor: pointer; } button:disabled { cursor: not-allowed
   .pdf-page { min-width:0 !important; max-width:100% !important; width:100% !important; }
   .field-notice { font-size:11px; margin-bottom:8px; padding:0 4px; text-align:center; }
   .print-button { padding:7px 12px; font-size:12px; }
+  .pdf-control { font-size:clamp(4px, 1.8vw, 9px); padding:0 1px; }
+  .pdf-character-display { font-size:clamp(4px, 1.6vw, 9px); }
+  .pdf-character-display span { font-size:clamp(3px, min(65cqh, 72cqw), 8px); }
+  .pdf-character-input { font-size:8px; }
+  .pdf-control.checkbox, .pdf-control.radio { font-size:clamp(4px, 1.6vw, 9px); }
+  .media-box-action { font:600 clamp(4px,.45vw,7px)/1.15 system-ui,sans-serif; padding:2px 4px; }
 }
 
 @media (max-width: 480px) {
@@ -85,4 +91,10 @@ button { font: inherit; cursor: pointer; } button:disabled { cursor: not-allowed
   .image-preview { height:210px; }
   .modal-actions { flex-wrap:wrap; }
   .modal-actions button { flex:1 1 auto; }
+  .pdf-control { font-size:clamp(3px, 1.4vw, 7px); line-height:1; padding:0; }
+  .pdf-character-display { font-size:clamp(3px, 1.3vw, 7px); }
+  .pdf-character-display span { font-size:clamp(2.5px, min(60cqh, 68cqw), 7px); }
+  .pdf-character-input { font-size:6px; }
+  .pdf-control.checkbox, .pdf-control.radio { font-size:clamp(3px, 1.3vw, 7px); }
+  .page-number { font-size:8px; padding:2px 4px; }
 }
