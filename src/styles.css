@@ -21,7 +21,7 @@ button { font: inherit; cursor: pointer; } button:disabled { cursor: not-allowed
 .pdf-character-field:hover { box-shadow:inset 0 0 0 1px rgba(11,101,177,.2); background:rgba(226,242,255,.05); }
 .pdf-character-field:focus-within { box-shadow:none !important; background:transparent !important; outline:none !important; }
 .pdf-character-field:focus-within .pdf-character-display span.active-cell { background:transparent !important; box-shadow:none !important; }
-.pdf-character-field:focus-within .pdf-character-display span.active-cell::after { content:''; position:absolute; left:50%; top:12%; bottom:12%; width:1.5px; background-color:#0b65b1; transform:translateX(-50%); animation:pdfCaretBlink 1s infinite; pointer-events:none; }
+.pdf-character-field:focus-within .pdf-character-display span.active-cell::after { content:''; position:absolute; right:0; left:auto; top:8%; bottom:8%; width:1.5px; background-color:#0b65b1; transform:none; animation:pdfCaretBlink 1s infinite; pointer-events:none; }
 @keyframes pdfCaretBlink { 0%, 49% { opacity:1; } 50%, 100% { opacity:0; } }
 .pdf-control.checkbox,.pdf-control.radio { display:flex; align-items:center; justify-content:center; padding:0; color:#07121e; font-size:clamp(7px, .78vw, 12px); font-weight:700; line-height:1; cursor:pointer; }
 .pdf-control.radio { border-radius:50%; }
