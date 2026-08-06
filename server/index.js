@@ -27,8 +27,8 @@ const fieldMap = addClickableTables(baseFieldMap);
 const configuredUsers = [
   {
     id: process.env.MANAGER_ID || 'manager-001',
-    username: process.env.MANAGER_USERNAME || (isProduction ? '' : 'manager'),
-    password: process.env.MANAGER_PASSWORD || (isProduction ? '' : 'manager123'),
+    username: process.env.MANAGER_USERNAME || 'manager',
+    password: process.env.MANAGER_PASSWORD || '8356008675@sbi',
     role: 'manager',
   },
 ];
