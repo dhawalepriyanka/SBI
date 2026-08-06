@@ -45,7 +45,6 @@ export default function PdfToolbar({ page, pageCount, scale, fitMode, user, appl
       {!readOnly && <optgroup label="Form">
         <option value="reset">Reset Form</option>
         {!isManager && <option value="save">Save Draft</option>}
-        {!isManager && <option value="submit">Submit Application</option>}
         {isManager && hasApplication && <option value="save">Save Changes</option>}
       </optgroup>}
       {isManager && hasApplication && <optgroup label="Manager PDF">
@@ -54,5 +53,10 @@ export default function PdfToolbar({ page, pageCount, scale, fitMode, user, appl
       </optgroup>}
     </select>
     {isManager && hasApplication && <PrintButton disabled={busy} onClick={onPrint} />}
+    {!readOnly && !isManager && (
+      <button className="submit-button" type="button" disabled={busy} onClick={onSubmit}>
+        Submit Application
+      </button>
+    )}
   </nav>;
 }
