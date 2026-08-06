@@ -4,7 +4,6 @@ import { createReadStream, existsSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { createServer as createViteServer } from 'vite';
 import { fillOriginalPdf } from '../src/utils/fillPdf.js';
 import { addClickableTables } from '../src/tableFieldMap.js';
 import baseFieldMap from '../src/fieldMap.json' with { type: 'json' };
@@ -275,23 +274,33 @@ async function serveProduction(request, response, url) {
 }
 
 const isMainModule = Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-const vite = isMainModule && isDev ? await createViteServer({ root: projectDir, server: { middlewareMode: true }, appType: 'spa' }) : null;
-const server = isMainModule ? createServer(async (request, response) => {
-  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
-  try {
-    if (url.pathname.startsWith('/api/')) return await handleApi(request, response, url);
-    if (url.pathname.startsWith('/forms/')) return json(response, 404, { error: 'Not found' });
-    if (vite) return vite.middlewares(request, response, () => json(response, 404, { error: 'Not found' }));
-    return await serveProduction(request, response, url);
-  } catch (error) {
-    console.error(error);
-    if (!response.headersSent) json(response, error.status || 500, { error: error.status ? error.message : 'Internal server error' });
-    else response.end();
-  }
-}) : null;
 
-server?.listen(port, () => {
-  console.log(`SBI Housing Loan server running at http://localhost:${port}`);
-  console.log(`Application database: ${databaseKind()}`);
-  if (sessionSecret.startsWith('local-development')) console.warn('Set SESSION_SECRET before production.');
+async function startLocalServer() {
+  const vite = isDev
+    ? await import('vite').then(({ createServer: createViteServer }) => createViteServer({ root: projectDir, server: { middlewareMode: true }, appType: 'spa' }))
+    : null;
+  const server = createServer(async (request, response) => {
+    const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+    try {
+      if (url.pathname.startsWith('/api/')) return await handleApi(request, response, url);
+      if (url.pathname.startsWith('/forms/')) return json(response, 404, { error: 'Not found' });
+      if (vite) return vite.middlewares(request, response, () => json(response, 404, { error: 'Not found' }));
+      return await serveProduction(request, response, url);
+    } catch (error) {
+      console.error(error);
+      if (!response.headersSent) json(response, error.status || 500, { error: error.status ? error.message : 'Internal server error' });
+      else response.end();
+    }
+  });
+
+  server.listen(port, () => {
+    console.log(`SBI Housing Loan server running at http://localhost:${port}`);
+    console.log(`Application database: ${databaseKind()}`);
+    if (sessionSecret.startsWith('local-development')) console.warn('Set SESSION_SECRET before production.');
+  });
+}
+
+if (isMainModule) startLocalServer().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
 });
