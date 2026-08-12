@@ -36,9 +36,15 @@ button { font: inherit; cursor: pointer; } button:disabled { cursor: not-allowed
 .pdf-media-slot { position:absolute; display:flex; align-items:center; justify-content:center; overflow:hidden; pointer-events:auto; }
 .pdf-media { position:absolute; inset:2%; width:96%; height:96%; display:block; object-fit:contain; object-position:center; }
 .pdf-media.photo { background:#fff; }
-.media-box-actions { position:relative; z-index:1; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:5px; padding:4px; }
-.media-box-action { border:1px solid #85add3; border-radius:6px; padding:4px 6px; background:rgba(255,255,255,.94); color:#075a9f; box-shadow:0 1px 4px rgba(11,62,105,.16); font:700 clamp(6px,.58vw,9px)/1.15 system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
-.media-box-action:hover { border-color:#076bb6; background:#edf7ff; }
+.media-box-actions { position:relative; z-index:1; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px; width:100%; height:100%; padding:4px; }
+.media-box-action { border:1px solid #0b65b1; border-radius:6px; padding:4px 7px; background:#fff; color:#075a9f; box-shadow:0 1px 4px rgba(11,62,105,.28); font:700 clamp(8px,.68vw,11px)/1.15 system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
+.media-box-action:hover,.media-box-action:focus-visible { border-color:#064b87; background:#eaf5ff; outline:2px solid rgba(11,101,177,.25); outline-offset:1px; }
+/* Keep the controls legible in the two signature areas on Page 24. */
+.placement-signature-p24 .media-box-actions,.placement-signature-p24-office .media-box-actions { background:rgba(255,255,255,.18); }
+.placement-signature-p24 .media-box-actions { flex-wrap:nowrap; gap:4px; }
+.placement-signature-p24 .media-box-action { flex:1 1 0; min-width:0; padding:4px 2px; font-size:clamp(7px,.62vw,10px); }
+.placement-signature-p24-office .media-box-actions { flex-wrap:nowrap; gap:2px; padding:1px; }
+.placement-signature-p24-office .media-box-action { flex:1 1 0; min-width:0; padding:2px 1px; font-size:clamp(5px,.48vw,7px); }
 .pdf-media-slot.has-media .media-box-actions { opacity:0; transition:opacity .15s ease; }
 .pdf-media-slot.has-media:hover .media-box-actions,.pdf-media-slot.has-media:focus-within .media-box-actions { opacity:1; }
 .visually-hidden { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }

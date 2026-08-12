@@ -26,15 +26,15 @@ function MediaSlot({ item, src, onSelect, onDraw }) {
     height: `${item.height / 841.89 * 100}%`,
   };
 
-  return <div className={`pdf-media-slot ${item.kind}-slot${src ? ' has-media' : ''}`} data-placement-id={item.id} style={style}>
+  return <div className={`pdf-media-slot ${item.kind}-slot placement-${item.id}${src ? ' has-media' : ''}`} data-placement-id={item.id} style={style}>
     {src && <img src={src} alt={item.kind === 'photo' ? 'Uploaded photo' : 'Digital signature'} className={`pdf-media ${item.kind}`} />}
     <input ref={inputRef} className="visually-hidden" type="file" accept={acceptedImageTypes} onChange={chooseImage} />
     <div className="media-box-actions">
       {item.kind === 'signature' && <button type="button" className="media-box-action" onClick={() => onDraw(item.id)}>
-        {src ? 'Redraw' : 'Draw Signature'}
+        {src ? 'Redraw' : (item.id === 'signature-p24-office' ? 'Draw' : 'Draw Signature')}
       </button>}
       <button type="button" className="media-box-action" onClick={() => inputRef.current?.click()}>
-        {item.kind === 'photo' ? (src ? 'Replace Photo' : 'Upload Photo') : (src ? 'Replace' : 'Upload Signature')}
+        {item.kind === 'photo' ? (src ? 'Replace Photo' : 'Upload Photo') : (src ? 'Replace' : (item.id === 'signature-p24-office' ? 'Upload' : 'Upload Signature'))}
       </button>
     </div>
   </div>;
