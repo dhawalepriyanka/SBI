@@ -130,8 +130,8 @@ export function addClickableTables(fieldMap) {
     { id: 'p15_loan_term_years', type: 'text', x: 307, y: 126.2, width: 46, height: 12.8, maxLength: 3, align: 'center' },
     { id: 'p15_loan_term_months', type: 'text', x: 363, y: 126.2, width: 48, height: 12.8, maxLength: 3, align: 'center' },
     { id: 'p15_interest_type', type: 'select', x: 295.5, y: 140.8, width: 246.5, height: 29.2, options: ['Fixed', 'Floating'] },
-    { id: 'p15_floating_interest_rate', type: 'text', x: 322, y: 170.5, width: 37, height: 16, maxLength: 5, align: 'center' },
-    { id: 'p15_base_rate_spread', type: 'text', x: 405, y: 170.5, width: 38, height: 16, maxLength: 5, align: 'center' },
+    { id: 'p15_floating_interest_rate', type: 'text', x: 314, y: 170.5, width: 22, height: 14, maxLength: 5, align: 'center' },
+    { id: 'p15_base_rate_spread', type: 'text', x: 418, y: 170.5, width: 25, height: 14, maxLength: 5, align: 'left' },
     { id: 'p15_processing_fee', type: 'text', x: 422, y: 293.2, width: 118.8, height: 12.2, maxLength: 18 },
     { id: 'p15_legal_opinion_fee', type: 'text', x: 452, y: 307.8, width: 88.8, height: 12.2, maxLength: 18 },
     { id: 'p15_valuation_fee', type: 'text', x: 420, y: 322.4, width: 120.8, height: 12.2, maxLength: 18 },
@@ -174,8 +174,10 @@ export function addClickableTables(fieldMap) {
   ];
   const sellerColumns = [36, 167, 298, 391, 483, 576];
   const propertyDetailFields = [
-    { id: 'p11_rera_registration', type: 'character', x: 146.4, y: 322.4, width: 253.2, height: 11.5, maxLength: 22 },
-    { id: 'p11_project_name', type: 'character', x: 146.4, y: 337.5, width: 253.2, height: 11.5, maxLength: 22 },
+    // These rows contain 21 printed character boxes.  A 22-character grid
+    // causes each overlay cell to drift off its corresponding printed box.
+    { id: 'p11_rera_registration', type: 'character', x: 146.5, y: 322.5, width: 252, height: 11.4, maxLength: 21 },
+    { id: 'p11_project_name', type: 'character', x: 146.5, y: 337.6, width: 252, height: 11.4, maxLength: 21 },
     { id: 'p11_property_value', type: 'character', x: 117.9, y: 472.4, width: 143.3, height: 11.5, maxLength: 12 },
     { id: 'p11_property_owner_name', type: 'character', x: 167.5, y: 487.5, width: 276, height: 11.5, maxLength: 23 },
     { id: 'p11_building_name', type: 'character', x: 118.1, y: 577.1, width: 181.4, height: 11.5, maxLength: 15 },
@@ -183,9 +185,12 @@ export function addClickableTables(fieldMap) {
     { id: 'p11_property_address_1', type: 'character', x: 73.4, y: 652.6, width: 492.5, height: 11.5, maxLength: 41 },
     { id: 'p11_property_address_2', type: 'character', x: 73.4, y: 667.7, width: 492.5, height: 11.5, maxLength: 41 },
     { id: 'p11_property_address_3', type: 'character', x: 73.4, y: 682.8, width: 492.5, height: 11.5, maxLength: 41 },
-    { id: 'p11_property_city', type: 'character', x: 217.4, y: 697.3, width: 235.4, height: 11.5, maxLength: 20 },
+    // City and State each have 20 pre-printed boxes.  Their original
+    // coordinates started inside the first box, which made the character
+    // overlay drift across the grid at browser zoom levels.
+    { id: 'p11_property_city', type: 'character', x: 213.4, y: 697.3, width: 239.6, height: 11.5, maxLength: 20 },
     { id: 'p11_property_district', type: 'character', x: 73.4, y: 712.4, width: 105.1, height: 11.5, maxLength: 9 },
-    { id: 'p11_property_state', type: 'character', x: 217.4, y: 712.4, width: 235.4, height: 11.5, maxLength: 20 },
+    { id: 'p11_property_state', type: 'character', x: 213.4, y: 712.4, width: 239.6, height: 11.5, maxLength: 20 },
   ];
   pages['11'] = [
     ...(pages['11'] || [])

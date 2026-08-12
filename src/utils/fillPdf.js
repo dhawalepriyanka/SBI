@@ -1,5 +1,22 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import { readFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { imagePlacementMap } from '../imagePlacementMap.js';
+
+let cachedFontBytes = null;
+async function getHandwritingFontBytes() {
+  if (cachedFontBytes) return cachedFontBytes;
+  try {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const fontPath = join(currentDir, '../../server/private/handwriting.ttf');
+    cachedFontBytes = await readFile(fontPath);
+    return cachedFontBytes;
+  } catch {
+    return null;
+  }
+}
 
 function dataUrlBytes(dataUrl) {
   const encoded = dataUrl.split(',')[1];
@@ -51,7 +68,7 @@ function wrapText(text, font, size, width) {
 export async function fillOriginalPdf(originalBytes, values, fieldMap, media = {}) {
   const document = await PDFDocument.load(originalBytes, { ignoreEncryption: true });
   const font = await document.embedFont(StandardFonts.HelveticaBold);
-  const color = rgb(0, 0, 0);
+  const color = rgb(0.043, 0.235, 0.608);
   const fitText = (text, width, preferred) => {
     let size = preferred;
     while (size > 4 && font.widthOfTextAtSize(text, size) > width) size -= .25;
