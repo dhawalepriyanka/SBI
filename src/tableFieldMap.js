@@ -8,6 +8,44 @@ const propertyColumns = [36.43, 112.36, 270.14, 332.28, 416.81, 573.97];
 const assetColumns = [36.43, 169.12, 281.16, 375.36, 467.78, 573.97];
 const assetRows = [296.3, 313.06, 331.51, 349.56, 367.6, 385.64, 403.68, 421.73, 450.76, 478.22];
 
+// Page 21 is a scanned form page whose printed character cells have slightly
+// different widths by row. Keep these measurements local to page 21 so other
+// pages continue to use their existing character rendering.
+const obsoletePage21Ids = new Set([
+  'p21_004', 'p21_007', 'p21_008', 'p21_011',
+  'p23_004', 'p23_007', 'p23_008', 'p23_011',
+]);
+
+const PAGE_21_FIELD_CONFIG = {
+  p21_021: { x: 118.08, y: 334.6, boxWidth: 13.2, boxHeight: 12.95, maxLength: 3 },
+  p21_022: { x: 169.2, y: 334.6, boxWidth: 408.96 / 31, boxHeight: 12.95, maxLength: 31 },
+  p21_026: { x: 118.08, y: 399.36, boxWidth: 13.2, boxHeight: 12.95, maxLength: 3 },
+  p21_027: { x: 169.2, y: 399.36, boxWidth: 408.96 / 31, boxHeight: 12.95, maxLength: 31 },
+  p21_guardian_relationship: { x: 246.2, y: 414.47, boxWidth: 332 / 26, boxHeight: 12.23, maxLength: 26 },
+  p21_030: { x: 309.6, y: 430.3, boxWidth: 268.56 / 20, boxHeight: 12.95, maxLength: 20 },
+  p21_044: { x: 452.88, y: 538.5, boxWidth: 125.28 / 10, boxHeight: 12.95, maxLength: 10, touchPadding: 8 },
+};
+
+const PAGE_23_FIELD_CONFIG = {
+  p23_021: { x: 118.08, y: 334.6, boxWidth: 13.2, boxHeight: 12.95, maxLength: 3 },
+  p23_022: { x: 169.2, y: 334.6, boxWidth: 408.96 / 31, boxHeight: 12.95, maxLength: 31 },
+  p23_026: { x: 118.08, y: 399.36, boxWidth: 13.2, boxHeight: 12.95, maxLength: 3 },
+  p23_027: { x: 169.2, y: 399.36, boxWidth: 408.96 / 31, boxHeight: 12.95, maxLength: 31 },
+  p23_guardian_relationship: { x: 246.2, y: 414.47, boxWidth: 332 / 26, boxHeight: 12.23, maxLength: 26 },
+  p23_030: { x: 309.6, y: 430.3, boxWidth: 268.56 / 20, boxHeight: 12.95, maxLength: 20 },
+  p23_044: { x: 452.88, y: 538.5, boxWidth: 125.28 / 10, boxHeight: 12.95, maxLength: 10, touchPadding: 8 },
+  // Contact Details: measured from the printed Page 23 cell grid.
+  p23_074: { x: 226.08, y: 687.9, boxWidth: 128.16 / 10, boxHeight: 12.95, maxLength: 10 },
+  p23_075: { x: 61.92, y: 736.11, boxWidth: 38.88 / 3, boxHeight: 12.95, maxLength: 3 },
+  p23_076: { x: 113.04, y: 736.11, boxWidth: 128.16 / 10, boxHeight: 12.95, maxLength: 10 },
+  // Email ID in the Contact Details section (the row shown in the report).
+  p23_077: { x: 271.44, y: 736.11, boxWidth: 306.72 / 23, boxHeight: 12.95, maxLength: 23 },
+  p23_078: { x: 87.12, y: 754.82, boxWidth: 39.6 / 3, boxHeight: 12.95, maxLength: 3 },
+  p23_079: { x: 138.24, y: 754.82, boxWidth: 128.16 / 10, boxHeight: 12.95, maxLength: 10 },
+  p23_080: { x: 373.68, y: 754.82, boxWidth: 141.12 / 11, boxHeight: 12.95, maxLength: 11 },
+  p23_081: { x: 372.96, y: 773.53, boxWidth: 141.84 / 11, boxHeight: 12.23, maxLength: 11 },
+};
+
 function createTableFields(page, name, columns, rows) {
   const fields = [];
   // The first interval contains the printed column headings.
@@ -233,16 +271,29 @@ export function addClickableTables(fieldMap) {
     ...collateralFields,
   ];
   [21, 23].forEach((page) => {
+    const pageConfig = page === 21 ? PAGE_21_FIELD_CONFIG : PAGE_23_FIELD_CONFIG;
     pages[String(page)] = [
-      ...(pages[String(page)] || []).map((field) => {
+      ...(pages[String(page)] || []).filter((field) => !obsoletePage21Ids.has(field.id)).map((field) => {
+        if (pageConfig[field.id]) {
+          const config = pageConfig[field.id];
+          return {
+            ...field,
+            ...config,
+            width: config.boxWidth * config.maxLength,
+            // The Page 23 scan's printed boxes sit fractionally below the
+            // coordinate baseline. Use a box-relative offset so it scales
+            // with zoom without changing any other page.
+            characterOffsetY: page === 23 ? '15%' : undefined,
+          };
+        }
         if ([`p${page}_002`].includes(field.id)) return { ...field, maxLength: 18 };
-        if ([`p${page}_004`, `p${page}_007`].includes(field.id)) return { ...field, maxLength: 16 };
         return field;
       }),
       { id: `p${page}_name`, type: 'character', x: 131, y: 268.4, width: 447.2, height: 12.95, maxLength: 35 },
       { id: `p${page}_maiden_name`, type: 'character', x: 131, y: 297.9, width: 447.2, height: 12.23, maxLength: 35 },
-      { id: `p${page}_occupation_other_specify`, type: 'text', x: 350, y: 485.71, width: 93, height: 12.95, maxLength: 24 },
-      { id: `p${page}_religion_other`, type: 'text', x: 335, y: 522.4, width: 85, height: 12.95, maxLength: 22 },
+      { id: `p${page}_guardian_relationship`, type: 'character', ...(pageConfig[`p${page}_guardian_relationship`] || PAGE_21_FIELD_CONFIG.p21_guardian_relationship), width: (pageConfig[`p${page}_guardian_relationship`] || PAGE_21_FIELD_CONFIG.p21_guardian_relationship).boxWidth * 26, characterFontSize: '9px' },
+      { id: `p${page}_occupation_other_specify`, type: 'text', x: 350, y: page === 21 ? 502.0 : 485.71, width: 120, height: 12.95, maxLength: 28 },
+      { id: `p${page}_religion_other`, type: 'text', x: 335, y: page === 21 ? 558.0 : 522.4, width: 85, height: 12.95, maxLength: 22 },
       { id: `p${page}_organization_name`, type: 'text', x: 102, y: 595.8, width: 95, height: 12.95, maxLength: 28 },
       { id: `p${page}_citizenship`, type: 'text', x: 346, y: 651.21, width: 98, height: 12.95, maxLength: 28 },
     ];

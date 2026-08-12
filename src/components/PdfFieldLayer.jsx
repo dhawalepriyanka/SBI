@@ -7,13 +7,17 @@ function CharacterField({ field, value, style, readOnly, onChange }) {
   const rawString = String(value || '');
   const characterValue = rawString.slice(0, field.maxLength);
   const characters = Array.from({ length: field.maxLength }, (_, index) => characterValue[index] || '');
+  const cellCount = Math.max(1, field.maxLength);
+  const useFixedCells = Number.isFinite(field.boxWidth) && field.boxWidth > 0;
 
   const handleContainerClick = (event) => {
     if (readOnly) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    if (rect.width <= 0) return;
-    const cellWidth = rect.width / field.maxLength;
+    const padding = field.touchPadding || 0;
+    const clickX = event.clientX - rect.left - padding;
+    const visualWidth = rect.width - padding * 2;
+    if (visualWidth <= 0) return;
+    const cellWidth = visualWidth / field.maxLength;
     const clickedIndex = Math.min(field.maxLength - 1, Math.max(0, Math.floor(clickX / cellWidth)));
     setFocusedIndex(clickedIndex);
     inputRef.current?.focus();
@@ -101,12 +105,24 @@ function CharacterField({ field, value, style, readOnly, onChange }) {
 
   const activeIndex = focusedIndex !== null ? focusedIndex : Math.min(characterValue.length, field.maxLength - 1);
 
+  const touchPadding = field.touchPadding || 0;
+  const visualStyle = {
+    gridTemplateColumns: `repeat(${cellCount}, minmax(0, 1fr))`,
+    inset: touchPadding ? `${touchPadding}px` : undefined,
+    '--character-font-size': field.characterFontSize || undefined,
+    '--character-offset-y': field.characterOffsetY || '0%',
+  };
+
   return <div style={style} className="pdf-character-field" onClick={handleContainerClick}>
-    <div className="pdf-character-display" style={{ gridTemplateColumns: `repeat(${field.maxLength}, 1fr)` }} aria-hidden="true">
+    <div className={`pdf-character-display ${useFixedCells ? 'fixed-character-cells' : ''}`} style={visualStyle} aria-hidden="true">
       {characters.map((character, index) => (
         <span
           key={index}
           className={index === activeIndex ? 'active-cell' : ''}
+          style={useFixedCells ? {
+            left: `${index * field.boxWidth / field.width * 100}%`,
+            width: `${field.boxWidth / field.width * 100}%`,
+          } : undefined}
         >
           {character}
         </span>
@@ -138,11 +154,12 @@ export default function PdfFieldLayer({ fields, values, onChange, readOnly = fal
   return <div className="pdf-field-layer" aria-label="PDF form fields">
     {fields.map((field) => {
       const style = {
-        left: `${field.x / 612 * 100}%`,
-        top: `${field.y / 841.89 * 100}%`,
-        width: `${field.width / 612 * 100}%`,
-        height: `${field.height / 841.89 * 100}%`,
+        left: field.touchPadding ? `calc(${field.x / 612 * 100}% - ${field.touchPadding}px)` : `${field.x / 612 * 100}%`,
+        top: field.touchPadding ? `calc(${field.y / 841.89 * 100}% - ${field.touchPadding}px)` : `${field.y / 841.89 * 100}%`,
+        width: field.touchPadding ? `calc(${field.width / 612 * 100}% + ${field.touchPadding * 2}px)` : `${field.width / 612 * 100}%`,
+        height: field.touchPadding ? `calc(${field.height / 841.89 * 100}% + ${field.touchPadding * 2}px)` : `${field.height / 841.89 * 100}%`,
         textAlign: field.align || undefined,
+        zIndex: field.zIndex || undefined,
       };
       const value = values[field.id] ?? '';
       if (field.type === 'checkbox' || field.type === 'radio') {
