@@ -88,12 +88,13 @@ async function readJson(request, maximumBytes = 20 * 1024 * 1024) {
 function normalizeFormData(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Object.assign(new Error('Invalid form data'), { status: 400 });
   const cleanObject = (candidate) => candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? candidate : {};
-  return { values: cleanObject(value.values), photo: cleanObject(value.photo), signature: cleanObject(value.signature) };
+  const applicationName = typeof value.applicationName === 'string' ? value.applicationName.trim().slice(0, 80) : '';
+  return { values: cleanObject(value.values), photo: cleanObject(value.photo), signature: cleanObject(value.signature), applicationName };
 }
 
 function serializeApplication(row, includeData = false) {
   const formData = JSON.parse(row.form_data);
-  const applicantName = String(formData?.values?.p3_007 || '').trim().replace(/\s+/g, ' ');
+  const applicantName = String(formData?.applicationName || formData?.values?.p3_007 || '').trim().replace(/\s+/g, ' ');
   const application = {
     id: row.id,
     employeeId: row.employee_id,

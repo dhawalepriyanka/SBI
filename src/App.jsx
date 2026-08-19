@@ -49,10 +49,18 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [startupError, setStartupError] = useState('');
+  const [submissionName, setSubmissionName] = useState(null);
 
   useEffect(() => {
-    if (!/^(Application changes saved\.|Draft saved\.|Application submitted\.)$/.test(message)) return undefined;
-    const timeout = window.setTimeout(() => setMessage(''), 800);
+    const successDurations = {
+      'Application changes saved.': 800,
+      'Draft saved.': 800,
+      'Application deleted successfully.': 800,
+      'Application submitted successfully.': 3500,
+    };
+    const duration = successDurations[message];
+    if (!duration) return undefined;
+    const timeout = window.setTimeout(() => setMessage(''), duration);
     return () => window.clearTimeout(timeout);
   }, [message]);
 
@@ -162,18 +170,24 @@ export default function App() {
     }
   }, [current, formData, loadApplications, user]);
 
-  const submitApplication = useCallback(async () => {
+  const requestSubmit = useCallback(() => {
+    setSubmissionName(String(values.p3_007 || '').trim());
+  }, [values]);
+
+  const submitApplication = useCallback(async (applicationName) => {
     setBusy(true);
     setMessage('');
+    const submittedFormData = { ...formData, applicationName: String(applicationName || '').trim() };
     try {
       let application = current;
       if (!application) {
-        const created = await apiRequest('/api/applications', { method: 'POST', body: JSON.stringify({ formData }) });
+        const created = await apiRequest('/api/applications', { method: 'POST', body: JSON.stringify({ formData: submittedFormData }) });
         application = created.application;
       }
-      const result = await apiRequest(`/api/applications/${application.id}/submit`, { method: 'POST', body: JSON.stringify({ formData }) });
+      const result = await apiRequest(`/api/applications/${application.id}/submit`, { method: 'POST', body: JSON.stringify({ formData: submittedFormData }) });
       setCurrent(result.application);
       await loadApplications();
+      setSubmissionName(null);
       setMessage('Application submitted successfully.');
     } catch (error) {
       setMessage(error.message);
@@ -307,7 +321,7 @@ export default function App() {
           dateFilters={managerDateFilters} onDateFiltersChange={setManagerDateFilters}
           onPageChange={setPage} onScaleChange={(next) => { setFitMode(null); setScale(next); }}
           onFitMode={setFitMode} onRotate={() => setRotation((value) => (value + 90) % 360)}
-          onNew={newApplication} onOpen={openApplication} onReset={clearForm} onSave={saveApplication} onSubmit={submitApplication} onDelete={deleteCurrentApplication}
+          onNew={newApplication} onOpen={openApplication} onReset={clearForm} onSave={saveApplication} onSubmit={requestSubmit} onDelete={deleteCurrentApplication}
           onGenerate={() => usePdfBlob('generate')} onDownload={() => usePdfBlob('download')} onPrint={() => usePdfBlob('print')} />
         {managerWithoutSelection ? <div className="manager-queue">
           <div className="manager-queue-heading"><div><p className="eyebrow">Manager queue</p><h2>Submitted applications</h2><p>{managerDateFilters.date ? `Applications submitted on ${formatSubmittedDate(`${managerDateFilters.date}T00:00:00`)}` : 'Select a customer to review their submitted form.'}</p></div><span className="queue-count">{visibleApplications.length} {visibleApplications.length === 1 ? 'application' : 'applications'}</span></div>
@@ -330,5 +344,11 @@ export default function App() {
     }} />}
     {imagePreview && !readOnly && <ImagePreviewModal title={imagePreview.kind === 'photo' ? 'Photo' : 'Signature'}
       kind={imagePreview.kind} src={imagePreview.src} onConfirm={confirmPreview} onCancel={() => setImagePreview(null)} />}
+    {submissionName !== null && <div className="modal-backdrop" role="presentation"><form className="submission-name-modal" role="dialog" aria-modal="true" aria-labelledby="submission-name-title" onSubmit={(event) => { event.preventDefault(); submitApplication(submissionName); }}>
+      <div className="modal-heading"><div><p className="eyebrow">Submit application</p><h2 id="submission-name-title">Save application name</h2></div><button className="modal-close" type="button" onClick={() => setSubmissionName(null)} aria-label="Close">×</button></div>
+      <p className="modal-help">This name will identify the submitted application for the manager.</p>
+      <label className="submission-name-label">Application name<input autoFocus required maxLength={80} value={submissionName} onChange={(event) => setSubmissionName(event.target.value)} placeholder="Enter customer name" /></label>
+      <div className="modal-actions"><button className="tool-button" type="button" onClick={() => setSubmissionName(null)}>Cancel</button><button className="submit-button" type="submit" disabled={busy}>Submit application</button></div>
+    </form></div>}
   </main>;
 }
