@@ -198,7 +198,8 @@ export default function App() {
 
   const deleteCurrentApplication = useCallback(async () => {
     if (!current) return;
-    if (!window.confirm(`Are you sure you want to delete application ${current.id.slice(0, 8).toUpperCase()}?`)) return;
+    const customerName = current.applicantName || current.formData?.applicationName || current.formData?.values?.p3_007 || 'this customer application';
+    if (!window.confirm(`Are you sure you want to delete the application for ${customerName}?`)) return;
     setBusy(true);
     setMessage('');
     try {
