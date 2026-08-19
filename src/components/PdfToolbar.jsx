@@ -1,11 +1,12 @@
 import PrintButton from './PrintButton';
 import PageNavigation from './PageNavigation';
+import { useState } from 'react';
 
-export default function PdfToolbar({ page, pageCount, scale, fitMode, user, applications, currentId, hasApplication, readOnly, busy, onPageChange, onScaleChange, onFitMode, onNew, onOpen, onReset, onSave, onSubmit, onDelete, onGenerate, onPrint, onDownload }) {
+export default function PdfToolbar({ page, pageCount, scale, fitMode, user, applications, currentId, hasApplication, readOnly, busy, dateFilters, onDateFiltersChange, onPageChange, onScaleChange, onFitMode, onNew, onOpen, onReset, onSave, onSubmit, onDelete, onGenerate, onPrint, onDownload }) {
   const isManager = user.role === 'manager';
-  const runAction = (event) => {
-    const action = event.target.value;
-    event.target.value = '';
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const runAction = (action) => {
+    setActionsOpen(false);
     if (action === 'zoom-out') onScaleChange(Math.max(0.5, scale - 0.1));
     if (action === 'zoom-in') onScaleChange(Math.min(2.5, scale + 0.1));
     if (action === 'fit-width') onFitMode('width');
@@ -22,32 +23,18 @@ export default function PdfToolbar({ page, pageCount, scale, fitMode, user, appl
 
   return <nav className="toolbar" aria-label="PDF controls">
     <PageNavigation page={page} pageCount={pageCount} onChange={onPageChange} />
-    <select className="toolbar-actions-select" aria-label="PDF and application actions" defaultValue="" disabled={busy} onChange={runAction}>
-      <option value="" disabled>Actions</option>
-      {!isManager && <optgroup label="My Applications">
-        <option value="new">New Application</option>
-        {applications.map((application) => <option key={application.id} value={`open:${application.id}`}>
-          {application.id === currentId ? 'Current: ' : ''}{application.status === 'submitted' ? 'Submitted' : 'Draft'} - {application.id.slice(0, 8).toUpperCase()}
-        </option>)}
-      </optgroup>}
-      {isManager && <optgroup label="Submitted Applications">
-        {applications.length ? applications.map((application) => <option key={application.id} value={`open:${application.id}`}>
-          {application.id === currentId ? 'Current: ' : ''}{application.id.slice(0, 8).toUpperCase()} - {application.employeeId}
-        </option>) : <option disabled>No submitted applications</option>}
-      </optgroup>}
-      {!readOnly && <optgroup label="Form">
-        <option value="reset">Reset Form</option>
-        {!isManager && <option value="save">Save Draft</option>}
-        {isManager && hasApplication && <option value="save">Save Changes</option>}
-      </optgroup>}
-      {isManager && hasApplication && <optgroup label="Manager PDF">
-        <option value="generate">Generate PDF</option>
-        <option value="download">Download PDF</option>
-      </optgroup>}
-      {hasApplication && <optgroup label="Manage Application">
-        <option value="delete">Delete Application</option>
-      </optgroup>}
-    </select>
+    {isManager && <div className="manager-date-filters" aria-label="Filter submitted applications by date">
+      <label>Date <input type="date" value={dateFilters.date} onChange={(event) => onDateFiltersChange({ date: event.target.value })} /></label>
+      {dateFilters.date && <button type="button" className="date-filter-clear" onClick={() => onDateFiltersChange({ date: '' })}>Clear</button>}
+    </div>}
+    {(!isManager || hasApplication) && <div className="action-menu">
+      <button type="button" className="action-menu-trigger" disabled={busy} aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)}>Actions <span>⌄</span></button>
+      {actionsOpen && <div className="action-menu-panel" role="menu">
+        {!isManager && <><p>My applications</p><button type="button" role="menuitem" onClick={() => runAction('new')}>New application</button>{applications.map((application) => <button key={application.id} type="button" role="menuitem" onClick={() => runAction(`open:${application.id}`)}>{application.status === 'submitted' ? 'Submitted' : 'Draft'} · {application.id.slice(0, 8).toUpperCase()}</button>)}</>}
+        {!readOnly && <><p>{isManager ? 'Form' : 'Form actions'}</p>{isManager && hasApplication && <button type="button" role="menuitem" onClick={() => runAction('save')}>Save changes</button>}<button type="button" role="menuitem" onClick={() => runAction('reset')}>Reset form</button></>}
+        {isManager && hasApplication && <><p>PDF</p><button type="button" role="menuitem" onClick={() => runAction('generate')}>Generate PDF</button><button type="button" role="menuitem" onClick={() => runAction('download')}>Download PDF</button></>}
+      </div>}
+    </div>}
     <div className="toolbar-end-actions">
       {hasApplication && (
         <button className="delete-button" type="button" disabled={busy} onClick={onDelete}>

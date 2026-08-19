@@ -40,6 +40,7 @@ export default function App() {
   const [scale, setScale] = useState(1.15);
   const [fitMode, setFitMode] = useState('width');
   const [rotation, setRotation] = useState(0);
+  const [managerDateFilters, setManagerDateFilters] = useState({ date: '' });
   const [values, setValues] = useState({});
   const [photo, setPhoto] = useState({});
   const [signature, setSignature] = useState({});
@@ -48,6 +49,12 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [startupError, setStartupError] = useState('');
+
+  useEffect(() => {
+    if (!/^(Application changes saved\.|Draft saved\.|Application submitted\.)$/.test(message)) return undefined;
+    const timeout = window.setTimeout(() => setMessage(''), 800);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   const loadApplications = useCallback(async () => {
     const result = await apiRequest('/api/applications');
@@ -92,6 +99,18 @@ export default function App() {
 
   const formData = useMemo(() => ({ values: uppercaseFieldValues(values), photo, signature }), [photo, signature, values]);
   const readOnly = Boolean(current && ((user?.role === 'employee' && current.status === 'submitted') || (user?.role === 'manager' && !user.canEdit)));
+  const visibleApplications = useMemo(() => {
+    if (user?.role !== 'manager') return applications;
+    const localDate = (timestamp) => {
+      const date = new Date(timestamp);
+      const pad = (value) => String(value).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    };
+    return applications.filter((application) => {
+      const date = localDate(application.submittedAt || application.updatedAt);
+      return !managerDateFilters.date || date === managerDateFilters.date;
+    });
+  }, [applications, managerDateFilters, user?.role]);
 
   const clearForm = useCallback(() => {
     setValues({});
@@ -269,12 +288,14 @@ export default function App() {
   </div>;
 
   const managerWithoutSelection = user.role === 'manager' && !current;
+  const formatSubmittedDate = (timestamp) => new Date(timestamp).toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
   return <main className="app-shell">
     <header className="app-header">
       <div><p className="eyebrow">Official SBI Form</p><h1>Housing Loan Application</h1></div>
       {user.role === 'manager' && <div className="session-actions">
         <span className="role-badge manager">Bank Manager</span>
-        <span>{user.username}</span>
         <button className="tool-button" onClick={logout}>Sign out</button>
       </div>}
     </header>
@@ -282,12 +303,18 @@ export default function App() {
       <section className="form-workspace">
         {message && <div className="status-message" role="status">{message}</div>}
         <PdfToolbar page={page} pageCount={pageCount} scale={scale} fitMode={fitMode} rotation={rotation}
-          user={user} applications={applications} currentId={current?.id} hasApplication={Boolean(current)} readOnly={readOnly} busy={busy}
+          user={user} applications={visibleApplications} currentId={current?.id} hasApplication={Boolean(current)} readOnly={readOnly} busy={busy}
+          dateFilters={managerDateFilters} onDateFiltersChange={setManagerDateFilters}
           onPageChange={setPage} onScaleChange={(next) => { setFitMode(null); setScale(next); }}
           onFitMode={setFitMode} onRotate={() => setRotation((value) => (value + 90) % 360)}
           onNew={newApplication} onOpen={openApplication} onReset={clearForm} onSave={saveApplication} onSubmit={submitApplication} onDelete={deleteCurrentApplication}
           onGenerate={() => usePdfBlob('generate')} onDownload={() => usePdfBlob('download')} onPrint={() => usePdfBlob('print')} />
-        {managerWithoutSelection ? <div className="manager-empty"><h2>Select a submitted application</h2><p>Choose an application from the Actions menu to review its stored form data and generate the official PDF.</p></div> : <>
+        {managerWithoutSelection ? <div className="manager-queue">
+          <div className="manager-queue-heading"><div><p className="eyebrow">Manager queue</p><h2>Submitted applications</h2><p>{managerDateFilters.date ? `Applications submitted on ${formatSubmittedDate(`${managerDateFilters.date}T00:00:00`)}` : 'Select a customer to review their submitted form.'}</p></div><span className="queue-count">{visibleApplications.length} {visibleApplications.length === 1 ? 'application' : 'applications'}</span></div>
+          {visibleApplications.length ? <div className="manager-application-grid">{visibleApplications.map((application) => <button key={application.id} type="button" className="manager-application-card" onClick={() => openApplication(application.id)} disabled={busy}>
+            <strong>{application.applicantName}</strong><span>Submitted {formatSubmittedDate(application.submittedAt || application.updatedAt)}</span><small>Open application →</small>
+          </button>)}</div> : <div className="manager-empty"><h2>No submitted applications</h2><p>Choose another date or clear the date filter to view applications.</p></div>}
+        </div> : <>
           <PdfViewer fieldMap={fieldMap} values={values} photo={photo} signature={signature} page={page} scale={scale} fitMode={fitMode} rotation={rotation}
             readOnly={readOnly} mediaActions={{
               onPhotoSelected: (placementId, src) => setImagePreview({ kind: 'photo', placementId, src }),

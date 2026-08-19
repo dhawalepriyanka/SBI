@@ -92,15 +92,19 @@ function normalizeFormData(value) {
 }
 
 function serializeApplication(row, includeData = false) {
+  const formData = JSON.parse(row.form_data);
+  const applicantName = String(formData?.values?.p3_007 || '').trim().replace(/\s+/g, ' ');
   const application = {
     id: row.id,
     employeeId: row.employee_id,
+    // Page 3's Name field identifies the person who submitted the form.
+    applicantName: applicantName || 'Unnamed applicant',
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     submittedAt: row.submitted_at,
   };
-  if (includeData) application.formData = JSON.parse(row.form_data);
+  if (includeData) application.formData = formData;
   return application;
 }
 
