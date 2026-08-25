@@ -27,6 +27,7 @@ function MediaSlot({ item, src, onSelect, onDraw }) {
   };
 
   return <div className={`pdf-media-slot ${item.kind}-slot placement-${item.id}${src ? ' has-media' : ''}`} data-placement-id={item.id} style={style}>
+    {item.label && <span className="media-slot-label">{item.label}</span>}
     {src && <img src={src} alt={item.kind === 'photo' ? 'Uploaded photo' : 'Digital signature'} className={`pdf-media ${item.kind}`} />}
     <input ref={inputRef} className="visually-hidden" type="file" accept={acceptedImageTypes} onChange={chooseImage} />
     <div className="media-box-actions">
@@ -50,7 +51,7 @@ export default function PdfMediaLayer({ pageNumber, photo, signature, onPhotoSel
   return <div className="pdf-media-layer" aria-label="Photo and signature placements">
     {items.map((item) => readOnly ? <div key={item.id} className={`pdf-media-slot ${item.kind}-slot has-media`} style={{
       left: `${item.x / 612 * 100}%`, top: `${item.y / 841.89 * 100}%`, width: `${item.width / 612 * 100}%`, height: `${item.height / 841.89 * 100}%`,
-    }}>{item.src && <img src={item.src} alt="" className={`pdf-media ${item.kind}`} />}</div> : <MediaSlot key={item.id} item={item} src={item.src}
+    }}>{item.label && <span className="media-slot-label">{item.label}</span>}{item.src && <img src={item.src} alt="" className={`pdf-media ${item.kind}`} />}</div> : <MediaSlot key={item.id} item={item} src={item.src}
       onSelect={item.onSelect} onDraw={onDrawSignature} />)}
   </div>;
 }
