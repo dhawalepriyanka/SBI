@@ -128,10 +128,13 @@ async function streamOfficialPdf(response, application, disposition) {
   const stored = JSON.parse(application.form_data);
   const template = new Uint8Array(await readFile(templatePath));
   const bytes = await fillOriginalPdf(template, stored.values || {}, fieldMap, { photo: stored.photo || {}, signature: stored.signature || {} });
+  const rawName = String(stored.applicationName || stored.values?.p3_007 || application.id || 'form').trim();
+  const safeName = rawName.replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\s+/g, '_') || application.id;
+  const filename = `SBI-Housing-Loan-${safeName}.pdf`;
   response.writeHead(200, {
     'Content-Type': 'application/pdf',
     'Content-Length': bytes.length,
-    'Content-Disposition': `${disposition}; filename="SBI-Housing-Loan-${application.id}.pdf"`,
+    'Content-Disposition': `${disposition}; filename="${filename}"`,
     'Cache-Control': 'no-store, private',
     'X-Content-Type-Options': 'nosniff',
   });
@@ -256,7 +259,7 @@ export async function handleApi(request, response, url) {
   }
 
   const generateMatch = url.pathname.match(/^\/api\/applications\/([^/]+)\/generate-pdf$/);
-  if (generateMatch && request.method === 'POST') {
+  if (generateMatch && (request.method === 'GET' || request.method === 'POST')) {
     if (!requireManager(request, response)) return;
     const row = await getApplication(generateMatch[1]);
     if (!row || row.status !== 'submitted') return json(response, 404, { error: 'Application not found' });

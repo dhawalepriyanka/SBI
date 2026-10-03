@@ -18,15 +18,38 @@ async function getHandwritingFontBytes() {
   }
 }
 
+function sanitizeWinAnsi(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/\u20B9/g, 'Rs. ')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u2022\u2023\u25E6\u2043\u2219]/g, '*')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\x00-\xFF]/g, '');
+}
+
 function dataUrlBytes(dataUrl) {
-  const encoded = dataUrl.split(',')[1];
-  const binary = atob(encoded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const parts = dataUrl.split(',');
+  if (parts.length < 2) return null;
+  try {
+    const binary = atob(parts[1]);
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  } catch {
+    return null;
+  }
 }
 
 async function embedDataImage(document, dataUrl) {
   const bytes = dataUrlBytes(dataUrl);
-  return dataUrl.startsWith('data:image/png') ? document.embedPng(bytes) : document.embedJpg(bytes);
+  if (!bytes) return null;
+  try {
+    return dataUrl.startsWith('data:image/png') ? await document.embedPng(bytes) : await document.embedJpg(bytes);
+  } catch (error) {
+    console.warn('Failed to embed image in PDF:', error.message);
+    return null;
+  }
 }
 
 function wrapText(text, font, size, width) {
@@ -79,27 +102,33 @@ export async function fillOriginalPdf(originalBytes, values, fieldMap, media = {
     for (const placement of imagePlacementMap[kind]) {
       const dataUrl = media[kind]?.[placement.id];
       if (!dataUrl) continue;
-      const image = await embedDataImage(document, dataUrl);
-      const pdfPage = document.getPage(placement.page - 1);
-      const inset = kind === 'photo' ? 2 : 3;
-      const targetWidth = placement.width - inset * 2;
-      const targetHeight = placement.height - inset * 2;
-      const ratio = Math.min(targetWidth / image.width, targetHeight / image.height);
-      const width = image.width * ratio;
-      const height = image.height * ratio;
-      const boxBottom = fieldMap.pageHeight - placement.y - placement.height;
-      pdfPage.drawImage(image, {
-        x: placement.x + (placement.width - width) / 2,
-        y: boxBottom + (placement.height - height) / 2,
-        width, height,
-      });
+      try {
+        const image = await embedDataImage(document, dataUrl);
+        if (!image) continue;
+        const pdfPage = document.getPage(placement.page - 1);
+        const inset = kind === 'photo' ? 2 : 3;
+        const targetWidth = placement.width - inset * 2;
+        const targetHeight = placement.height - inset * 2;
+        const ratio = Math.min(targetWidth / image.width, targetHeight / image.height);
+        const width = image.width * ratio;
+        const height = image.height * ratio;
+        const boxBottom = fieldMap.pageHeight - placement.y - placement.height;
+        pdfPage.drawImage(image, {
+          x: placement.x + (placement.width - width) / 2,
+          y: boxBottom + (placement.height - height) / 2,
+          width, height,
+        });
+      } catch (imageError) {
+        console.warn(`Error placing ${kind} ${placement.id}:`, imageError.message);
+      }
     }
   }
 
   for (const [pageNumber, fields] of Object.entries(fieldMap.pages)) {
     const pdfPage = document.getPage(Number(pageNumber) - 1);
     for (const field of fields) {
-      const storedValue = String(values[field.id] || '').trim().toUpperCase();
+      const rawValue = String(values[field.id] || '').trim().toUpperCase();
+      const storedValue = sanitizeWinAnsi(rawValue);
       const value = storedValue;
       if (!value) continue;
       const bottom = fieldMap.pageHeight - field.y - field.height;

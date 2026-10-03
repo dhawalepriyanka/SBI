@@ -32,13 +32,18 @@ export default function PdfToolbar({ page, pageCount, scale, fitMode, user, appl
       {actionsOpen && <div className="action-menu-panel" role="menu">
         {!isManager && <><p>My applications</p><button type="button" role="menuitem" onClick={() => runAction('new')}>New application</button>{applications.map((application) => <button key={application.id} type="button" role="menuitem" onClick={() => runAction(`open:${application.id}`)}>{application.status === 'submitted' ? 'Submitted' : 'Draft'} · {application.id.slice(0, 8).toUpperCase()}</button>)}</>}
         {!readOnly && <><p>{isManager ? 'Form' : 'Form actions'}</p>{isManager && hasApplication && <button type="button" role="menuitem" onClick={() => runAction('save')}>Save changes</button>}<button type="button" role="menuitem" onClick={() => runAction('reset')}>Reset form</button></>}
-        {isManager && hasApplication && <><p>PDF</p><button type="button" role="menuitem" onClick={() => runAction('generate')}>Generate PDF</button><button type="button" role="menuitem" onClick={() => runAction('download')}>Download PDF</button></>}
+        {isManager && hasApplication && <><p>PDF</p><button type="button" role="menuitem" onClick={() => runAction('download')}>⬇ Download PDF</button><button type="button" role="menuitem" onClick={() => runAction('generate')}>👁 View in new tab</button></>}
       </div>}
     </div>}
     <div className="toolbar-end-actions">
       {hasApplication && (
         <button className="delete-button" type="button" disabled={busy} onClick={onDelete}>
           Delete Application
+        </button>
+      )}
+      {isManager && hasApplication && (
+        <button className="download-button" type="button" disabled={busy} onClick={onDownload} title="Download filled PDF">
+          ⬇ Download PDF
         </button>
       )}
       {isManager && hasApplication && <PrintButton disabled={busy} onClick={onPrint} />}

@@ -57,6 +57,7 @@ export default function App() {
       'Draft saved.': 800,
       'Application deleted successfully.': 800,
       'Application submitted successfully.': 3500,
+      'PDF downloaded successfully.': 3000,
     };
     const duration = successDurations[message];
     if (!duration) return undefined;
@@ -215,36 +216,47 @@ export default function App() {
     }
   }, [clearForm, current, loadApplications]);
 
-  const usePdfBlob = useCallback(async (mode) => {
-    if (!current || user.role !== 'manager') return;
+  const usePdfBlob = useCallback(async (mode, targetApplication = null) => {
+    const app = targetApplication || current;
+    if (!app || user?.role !== 'manager') return;
     setBusy(true);
-    setMessage('');
     try {
-      const path = mode === 'download' ? `/api/applications/${current.id}/pdf` : `/api/applications/${current.id}/generate-pdf`;
-      const blob = await pdfRequest(path, { method: mode === 'download' ? 'GET' : 'POST' });
-      const url = URL.createObjectURL(blob);
+      if (mode === 'generate') {
+        window.open(`/api/applications/${app.id}/generate-pdf`, '_blank');
+        return;
+      }
       if (mode === 'download') {
+        setMessage('Starting PDF download...');
+        const rawName = String(app.applicantName || app.formData?.applicationName || app.formData?.values?.p3_007 || app.id).trim();
+        const safeName = rawName.replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\s+/g, '_') || app.id;
         const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `SBI-Housing-Loan-${current.id}.pdf`;
+        anchor.href = `/api/applications/${app.id}/pdf`;
+        anchor.download = `SBI-Housing-Loan-${safeName}.pdf`;
+        document.body.appendChild(anchor);
         anchor.click();
-        window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-      } else if (mode === 'print') {
+        anchor.remove();
+        setMessage('PDF download started.');
+        return;
+      }
+      if (mode === 'print') {
+        setMessage('Preparing print preview...');
         const frame = document.createElement('iframe');
         frame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0';
-        frame.src = url;
+        frame.src = `/api/applications/${app.id}/generate-pdf`;
         frame.onload = () => {
           frame.contentWindow?.focus();
           frame.contentWindow?.print();
-          window.setTimeout(() => { URL.revokeObjectURL(url); frame.remove(); }, 60_000);
+          window.setTimeout(() => frame.remove(), 60_000);
+          setMessage('');
+        };
+        frame.onerror = () => {
+          frame.remove();
+          setMessage('Failed to load print preview.');
         };
         document.body.appendChild(frame);
-      } else {
-        window.open(url, '_blank', 'noopener,noreferrer');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       }
     } catch (error) {
-      setMessage(error.message);
+      setMessage(error.message || 'Failed to process PDF.');
     } finally {
       setBusy(false);
     }
@@ -310,6 +322,7 @@ export default function App() {
     <header className="app-header">
       <div><p className="eyebrow">Official SBI Form</p><h1>Housing Loan Application</h1></div>
       {user.role === 'manager' && <div className="session-actions">
+        {current && <button className="tool-button" type="button" onClick={() => { setCurrent(null); clearForm(); }}>← Back to Queue</button>}
         <span className="role-badge manager">Bank Manager</span>
         <button className="tool-button" onClick={logout}>Sign out</button>
       </div>}
@@ -326,9 +339,24 @@ export default function App() {
           onGenerate={() => usePdfBlob('generate')} onDownload={() => usePdfBlob('download')} onPrint={() => usePdfBlob('print')} />
         {managerWithoutSelection ? <div className="manager-queue">
           <div className="manager-queue-heading"><div><p className="eyebrow">Manager queue</p><h2>Submitted applications</h2><p>{managerDateFilters.date ? `Applications submitted on ${formatSubmittedDate(`${managerDateFilters.date}T00:00:00`)}` : 'Select a customer to review their submitted form.'}</p></div><span className="queue-count">{visibleApplications.length} {visibleApplications.length === 1 ? 'application' : 'applications'}</span></div>
-          {visibleApplications.length ? <div className="manager-application-grid">{visibleApplications.map((application) => <button key={application.id} type="button" className="manager-application-card" onClick={() => openApplication(application.id)} disabled={busy}>
-            <strong>{application.applicantName}</strong><span>Submitted {formatSubmittedDate(application.submittedAt || application.updatedAt)}</span><small>Open application →</small>
-          </button>)}</div> : <div className="manager-empty"><h2>No submitted applications</h2><p>Choose another date or clear the date filter to view applications.</p></div>}
+          {visibleApplications.length ? <div className="manager-application-grid">{visibleApplications.map((application) => {
+            const rawName = String(application.applicantName || application.id).trim();
+            const safeName = rawName.replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\s+/g, '_') || application.id;
+            return <div key={application.id} className="manager-application-card">
+              <div className="manager-card-info" onClick={() => openApplication(application.id)}>
+                <strong>{application.applicantName}</strong>
+                <span>Submitted {formatSubmittedDate(application.submittedAt || application.updatedAt)}</span>
+              </div>
+              <div className="manager-card-actions">
+                <a href={`/api/applications/${application.id}/pdf`} download={`SBI-Housing-Loan-${safeName}.pdf`} className="manager-card-btn primary" title="Download filled PDF">
+                  ⬇ Download PDF
+                </a>
+                <button type="button" className="manager-card-btn" onClick={() => openApplication(application.id)} disabled={busy}>
+                  Open form →
+                </button>
+              </div>
+            </div>;
+          })}</div> : <div className="manager-empty"><h2>No submitted applications</h2><p>Choose another date or clear the date filter to view applications.</p></div>}
         </div> : <>
           <PdfViewer fieldMap={fieldMap} values={values} photo={photo} signature={signature} page={page} scale={scale} fitMode={fitMode} rotation={rotation}
             readOnly={readOnly} mediaActions={{
