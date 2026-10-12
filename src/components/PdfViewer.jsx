@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import PdfFieldLayer from './PdfFieldLayer';
 import PdfMediaLayer from './PdfMediaLayer';
 
-const PAGE_COUNT = 24;
+// Pages 1 to 13 of application (Cover + Main Application Form ending with Acknowledgement Receipt)
+export const FORM_PAGES = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+export const PAGE_COUNT = FORM_PAGES.length;
 
-function LazyPdfPage({ pageNumber, scale, fitMode, rotation, pageRef, fields, values, onFieldChange, onVisiblePage, photo, signature, mediaActions, readOnly }) {
+function LazyPdfPage({ displayPage, sourcePage, scale, fitMode, rotation, pageRef, fields, values, onFieldChange, onVisiblePage, photo, signature, mediaActions, readOnly }) {
   const localRef = useRef(null);
-  const [active, setActive] = useState(pageNumber <= 2);
+  const [active, setActive] = useState(displayPage <= 2);
 
   useEffect(() => {
     const node = localRef.current;
@@ -20,11 +22,11 @@ function LazyPdfPage({ pageNumber, scale, fitMode, rotation, pageRef, fields, va
     const node = localRef.current;
     if (!node) return undefined;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) onVisiblePage(pageNumber);
+      if (entry.isIntersecting) onVisiblePage(displayPage);
     }, { rootMargin: '-32% 0px -58% 0px', threshold: 0 });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [onVisiblePage, pageNumber]);
+  }, [onVisiblePage, displayPage]);
 
   const setRef = (node) => {
     localRef.current = node;
@@ -33,10 +35,10 @@ function LazyPdfPage({ pageNumber, scale, fitMode, rotation, pageRef, fields, va
   const style = fitMode ? undefined : { width: `${612 * scale}px` };
 
   return <article className="pdf-page" ref={setRef} style={style}>
-    {active && <img className="pdf-page-image" src={`/api/form-pages/${pageNumber}`} alt={`Official SBI form page ${pageNumber}`} draggable="false" />}
-    {active && !rotation && <PdfMediaLayer pageNumber={pageNumber} photo={photo} signature={signature} readOnly={readOnly} {...mediaActions} />}
+    {active && <img className="pdf-page-image" src={`/api/form-pages/${sourcePage}?v=seq`} alt={`Official SBI form page ${displayPage}`} draggable="false" />}
+    {active && !rotation && <PdfMediaLayer pageNumber={sourcePage} photo={photo} signature={signature} readOnly={readOnly} {...mediaActions} />}
     {active && !rotation && <PdfFieldLayer fields={fields} values={values} onChange={onFieldChange} readOnly={readOnly} />}
-    <span className="page-number">Page {pageNumber}</span>
+    <span className="page-number">Page {displayPage}</span>
   </article>;
 }
 
@@ -67,16 +69,18 @@ export default function PdfViewer({ fieldMap, values, photo, signature, mediaAct
     onVisiblePage(pageNumber);
   };
   const pageWidth = fitMode === 'page' ? Math.min(900, availableWidth) : Math.min(1080, availableWidth);
-  const renderedPages = Array.from({ length: PAGE_COUNT }, (_, index) => index + 1);
 
   return <section className="viewer-area" ref={scrollRef}>
     <p className="field-notice neutral">Click a printed box to enter a value. The official PDF template remains secured on the server.</p>
     <div className={fitMode === 'width' ? 'pdf-stack fit-width' : 'pdf-stack'} style={fitMode ? { width: pageWidth } : undefined}>
-      {renderedPages.map((pageNumber) => <LazyPdfPage key={pageNumber} pageNumber={pageNumber}
-        scale={scale} fitMode={fitMode} rotation={rotation}
-        fields={fieldMap.pages[String(pageNumber)] || []} values={values} onFieldChange={onFieldChange}
-        onVisiblePage={handleVisiblePage} photo={photo} signature={signature} mediaActions={mediaActions}
-        readOnly={readOnly} pageRef={(node) => { pageRefs.current[pageNumber - 1] = node; }} />)}
+      {FORM_PAGES.map((sourcePage, index) => {
+        const displayPage = index + 1;
+        return <LazyPdfPage key={sourcePage} displayPage={displayPage} sourcePage={sourcePage}
+          scale={scale} fitMode={fitMode} rotation={rotation}
+          fields={fieldMap.pages[String(sourcePage)] || []} values={values} onFieldChange={onFieldChange}
+          onVisiblePage={handleVisiblePage} photo={photo} signature={signature} mediaActions={mediaActions}
+          readOnly={readOnly} pageRef={(node) => { pageRefs.current[index] = node; }} />;
+      })}
     </div>
   </section>;
 }

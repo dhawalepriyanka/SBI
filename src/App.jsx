@@ -35,7 +35,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [applications, setApplications] = useState([]);
   const [current, setCurrent] = useState(null);
-  const [pageCount, setPageCount] = useState(24);
+  const [pageCount, setPageCount] = useState(13);
   const [page, setPage] = useState(1);
   const [scale, setScale] = useState(1.15);
   const [fitMode, setFitMode] = useState('width');

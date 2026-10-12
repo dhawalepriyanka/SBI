@@ -98,8 +98,11 @@ export async function fillOriginalPdf(originalBytes, values, fieldMap, media = {
     return size;
   };
 
+  const KEEP_ORIGINAL_PAGES = new Set([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+
   for (const kind of ['photo', 'signature']) {
     for (const placement of imagePlacementMap[kind]) {
+      if (!KEEP_ORIGINAL_PAGES.has(placement.page)) continue;
       const dataUrl = media[kind]?.[placement.id];
       if (!dataUrl) continue;
       try {
@@ -125,6 +128,7 @@ export async function fillOriginalPdf(originalBytes, values, fieldMap, media = {
   }
 
   for (const [pageNumber, fields] of Object.entries(fieldMap.pages)) {
+    if (!KEEP_ORIGINAL_PAGES.has(Number(pageNumber))) continue;
     const pdfPage = document.getPage(Number(pageNumber) - 1);
     for (const field of fields) {
       const rawValue = String(values[field.id] || '').trim().toUpperCase();
@@ -211,5 +215,33 @@ export async function fillOriginalPdf(originalBytes, values, fieldMap, media = {
         y: bottom + Math.max(1.5, (field.height - size) / 2), size, font, color });
     }
   }
+  for (let i = document.getPageCount() - 1; i >= 0; i--) {
+    if (!KEEP_ORIGINAL_PAGES.has(i + 1)) {
+      document.removePage(i);
+    }
+  }
+
+  const pageNumberFont = await document.embedFont(StandardFonts.Helvetica);
+  const remainingPages = document.getPageCount();
+  for (let i = 1; i < remainingPages; i++) {
+    const page = document.getPage(i);
+    const pageNumText = String(i + 1);
+    const textWidth = pageNumberFont.widthOfTextAtSize(pageNumText, 8);
+    page.drawRectangle({
+      x: 290,
+      y: 24,
+      width: 32,
+      height: 16,
+      color: rgb(1, 1, 1),
+    });
+    page.drawText(pageNumText, {
+      x: 306 - textWidth / 2,
+      y: 29,
+      size: 8,
+      font: pageNumberFont,
+      color: rgb(0, 0, 0),
+    });
+  }
+
   return document.save({ useObjectStreams: true });
 }
